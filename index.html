@@ -1,13 +1,1022 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dwarf Miner</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Coin Pusher Auto Miner</title>
+<style>
+body {
+margin: 0;
+padding: 0;
+background: linear-gradient(135deg, #1a1a2e, #16213e);
+font-family: 'Arial', sans-serif;
+overflow: hidden;
+touch-action: manipulation; /* Prevent default touch behaviors */
+}
+
+#gameContainer {
+width: 100vw;
+height: 100vh;
+position: relative;
+}
+
+#ui {
+position: absolute;
+top: 20px;
+left: 20px;
+color: #ffd700;
+font-size: 18px; /* Increased for mobile */
+font-weight: bold;
+z-index: 100;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#buildingPanel {
+position: absolute;
+top: 20px;
+right: 20px;
+background: rgba(0,0,0,0.9);
+padding: 20px;
+border-radius: 10px;
+color: white;
+max-width: 320px;
+z-index: 100;
+max-height: 70vh;
+overflow-y: auto;
+font-size: 16px; /* Increased for mobile */
+}
+
+#buildingPanel h3 {
+color: #ffd700;
+margin-top: 0;
+text-align: center;
+}
+
+.building-option {
+background: rgba(255,255,255,0.1);
+margin: 10px 0;
+padding: 15px;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.3s ease;
+border: 2px solid transparent;
+}
+
+.building-option:hover {
+background: rgba(255,255,255,0.2);
+border-color: #ffd700;
+}
+
+.building-option.selected {
+border-color: #4477ff;
+background: rgba(68,119,255,0.3);
+}
+
+.building-option.affordable {
+border-color: #00ff00;
+}
+
+.building-option.expensive {
+opacity: 0.6;
+cursor: not-allowed;
+}
+
+.building-name {
+font-weight: bold;
+color: #ffd700;
+font-size: 16px;
+}
+
+.building-cost {
+color: #ffaa00;
+font-size: 14px;
+}
+
+.building-income {
+color: #00ff00;
+font-size: 14px;
+}
+
+.building-count {
+color: #88ccff;
+font-size: 12px;
+}
+
+.building-level {
+color: #ff6b6b;
+font-size: 12px;
+}
+
+.upgrade-section {
+margin-top: 10px;
+padding: 10px;
+background: rgba(255,255,255,0.05);
+border-radius: 5px;
+font-size: 12px;
+}
+
+.upgrade-btn {
+background: #4477ff;
+color: white;
+border: none;
+padding: 5px 10px;
+border-radius: 5px;
+cursor: pointer;
+font-size: 11px;
+margin-top: 5px;
+}
+
+.upgrade-btn:hover {
+background: #6699ff;
+}
+
+.upgrade-btn:disabled {
+background: #666;
+cursor: not-allowed;
+}
+
+#controls {
+position: absolute;
+bottom: 20px;
+left: 50%;
+transform: translateX(-50%);
+display: flex;
+gap: 10px;
+z-index: 100;
+}
+
+button {
+padding: 15px 30px;
+font-size: 18px; /* Increased for mobile */
+font-weight: bold;
+border: none;
+border-radius: 10px;
+cursor: pointer;
+transition: all 0.3s ease;
+background: linear-gradient(45deg, #ffd700, #ffed4e);
+color: #1a1a2e;
+touch-action: manipulation; /* Improve touch response */
+}
+
+button:hover {
+transform: translateY(-2px);
+box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+}
+
+button:active {
+transform: translateY(0);
+}
+
+button:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+transform: none;
+}
+
+#modeToggle {
+background: linear-gradient(45deg, #4477ff, #6699ff);
+color: white;
+}
+
+#buildingInfo {
+position: absolute;
+bottom: 120px;
+left: 50%;
+transform: translateX(-50%);
+background: rgba(0,0,0,0.8);
+padding: 15px;
+border-radius: 10px;
+color: white;
+text-align: center;
+z-index: 100;
+display: none;
+font-size: 16px; /* Increased for mobile */
+}
+
+.floating-gold {
+position: absolute;
+color: #ffd700;
+font-weight: bold;
+font-size: 18px;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+pointer-events: none;
+z-index: 50;
+}
+
+@keyframes floatUp {
+0% {
+opacity: 1;
+transform: translateY(0);
+}
+100% {
+opacity: 0;
+transform: translateY(-100px);
+}
+}
+
+.floating-gold {
+animation: floatUp 2s ease-out forwards;
+}
+
+#webglError {
+display: none;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+color: red;
+font-size: 18px;
+text-align: center;
+z-index: 200;
+}
+</style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <script src="game.js"></script>
+<div id="gameContainer">
+<div id="ui">
+<div>🪙 Gold: <span id="coinCount">100</span></div>
+<div>📊 Score: <span id="score">0</span></div>
+<div>🏗️ Buildings: <span id="buildingCount">0</span></div>
+<div>⚡ Auto Mine: <span id="income">0</span>/sec</div>
+</div>
+
+<div id="buildingPanel">
+<h3>🏗️ Auto Miners</h3>
+<div id="buildingOptions"></div>
+</div>
+
+<div id="controls">
+<button id="dropCoin">Drop Coin (10 gold)</button>
+<button id="pushButton">Push!</button>
+<button id="modeToggle">Build Mode</button>
+<button id="saveGame">Save Game</button>
+<button id="loadGame">Load Game</button>
+</div>
+
+<div id="buildingInfo">
+<div id="buildingInfoContent"></div>
+</div>
+
+<div id="webglError">
+WebGL is not supported on this device. Please use a modern browser.
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+let scene, camera, renderer, pusher, coins = [], gameStarted = false;
+let coinCount = 100, score = 0, totalBuildings = 0, autoMiningRate = 0;
+let pusherDirection = 1, pusherSpeed = 0.02;
+let isAnimating = false, buildMode = false;
+let buildingSlots = [], selectedBuildingType = null;
+let lastIncomeTime = Date.now();
+let buildings = {};
+
+const buildingTypes = {
+goldPan: {
+name: "Gold Pan",
+baseCost: 50,
+baseIncome: 1,
+color: 0xff6b6b,
+geometry: { width: 1, height: 1, depth: 1 },
+emoji: "🥽"
+},
+miningCart: {
+name: "Mining Cart",
+baseCost: 200,
+baseIncome: 5,
+color: 0x4ecdc4,
+geometry: { width: 1.2, height: 1.2, depth: 1.2 },
+emoji: "🛒"
+},
+goldDrill: {
+name: "Gold Drill",
+baseCost: 800,
+baseIncome: 20,
+color: 0x45b7d1,
+geometry: { width: 1.5, height: 2, depth: 1.5 },
+emoji: "🔧"
+},
+miningRig: {
+name: "Mining Rig",
+baseCost: 3000,
+baseIncome: 80,
+color: 0x96ceb4,
+geometry: { width: 2, height: 2.5, depth: 2 },
+emoji: "🏗️"
+},
+goldMine: {
+name: "Gold Mine",
+baseCost: 12000,
+baseIncome: 300,
+color: 0xfeca57,
+geometry: { width: 2.5, height: 3, depth: 2.5 },
+emoji: "⛏️"
+},
+superMiner: {
+name: "Super Miner",
+baseCost: 50000,
+baseIncome: 1200,
+color: 0xff3838,
+geometry: { width: 3, height: 4, depth: 3 },
+emoji: "🚀"
+}
+};
+
+function getUpgradeCost(baseCost, level) {
+return Math.floor(baseCost * Math.pow(1.8, level));
+}
+
+function getUpgradeIncome(baseIncome, level) {
+return Math.floor(baseIncome * Math.pow(1.6, level));
+}
+
+function updateUI() {
+try {
+document.getElementById('coinCount').textContent = Math.floor(coinCount);
+document.getElementById('score').textContent = score;
+document.getElementById('buildingCount').textContent = totalBuildings;
+document.getElementById('income').textContent = autoMiningRate;
+} catch (error) {
+console.error("UI update error:", error);
+}
+}
+
+function saveGame() {
+try {
+localStorage.setItem('coinCount', coinCount);
+localStorage.setItem('score', score);
+localStorage.setItem('totalBuildings', totalBuildings);
+localStorage.setItem('buildings', JSON.stringify(buildings));
+alert("Game saved!");
+} catch (error) {
+console.error("Save game error:", error);
+alert("Failed to save game.");
+}
+}
+
+function loadGame() {
+try {
+coinCount = parseFloat(localStorage.getItem('coinCount')) || 100;
+score = parseInt(localStorage.getItem('score')) || 0;
+totalBuildings = parseInt(localStorage.getItem('totalBuildings')) || 0;
+const savedBuildings = JSON.parse(localStorage.getItem('buildings')) || {};
+
+buildingSlots.forEach(slot => {
+if (savedBuildings[slot.userData.id]) {
+const savedData = savedBuildings[slot.userData.id];
+if (!slot.userData.isEmpty) {
+scene.remove(slot.userData.building);
+}
+slot.userData = savedData;
+if (!savedData.isEmpty) {
+const buildingDef = buildingTypes[savedData.buildingType];
+const newHeight = buildingDef.geometry.height * (1 + savedData.level * 0.3);
+const geometry = new THREE.BoxGeometry(
+buildingDef.geometry.width,
+newHeight,
+buildingDef.geometry.depth
+);
+const goldTint = Math.min(savedData.level * 0.2, 0.8);
+const baseColor = new THREE.Color(buildingDef.color);
+const goldColor = new THREE.Color(0xffd700);
+const finalColor = baseColor.lerp(goldColor, goldTint);
+const material = new THREE.MeshLambertMaterial({ color: finalColor });
+const building = new THREE.Mesh(geometry, material);
+building.position.copy(slot.position);
+building.position.y = newHeight / 2;
+building.castShadow = true;
+building.receiveShadow = true;
+scene.add(building);
+slot.userData.building = building;
+}
+}
+});
+buildings = savedBuildings;
+updateAutoMiningRate();
+updateUI();
+createBuildingPanel();
+alert("Game loaded!");
+} catch (error) {
+console.error("Load game error:", error);
+alert("Failed to load game.");
+}
+}
+
+function init() {
+try {
+console.log("Initializing game...");
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2a2a3e);
+
+camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 12, 15);
+camera.lookAt(0, 2, 0);
+
+renderer = new THREE.WebGLRenderer({ antialias: true });
+if (!renderer.getContext()) {
+document.getElementById('webglError').style.display = 'block';
+return;
+}
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.width = 512;
+renderer.shadowMap.height = 512;
+document.getElementById('gameContainer').appendChild(renderer.domElement);
+
+const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(10, 15, 10);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 512;
+directionalLight.shadow.mapSize.height = 512;
+directionalLight.shadow.camera.left = -25;
+directionalLight.shadow.camera.right = 25;
+directionalLight.shadow.camera.top = 25;
+directionalLight.shadow.camera.bottom = -25;
+scene.add(directionalLight);
+
+const pointLight = new THREE.PointLight(0xffd700, 1, 30);
+pointLight.position.set(0, 8, 5);
+scene.add(pointLight);
+
+const baseGeometry = new THREE.BoxGeometry(12, 0.2, 8);
+const baseMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+const base = new THREE.Mesh(baseGeometry, baseMaterial);
+base.position.y = -0.1;
+base.receiveShadow = true;
+scene.add(base);
+
+const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x444444 });
+const sideWallGeometry = new THREE.BoxGeometry(0.2, 3, 8);
+const leftWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+leftWall.position.set(-6, 1.5, 0);
+scene.add(leftWall);
+
+const rightWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+rightWall.position.set(6, 1.5, 0);
+scene.add(rightWall);
+
+const backWallGeometry = new THREE.BoxGeometry(12, 3, 0.2);
+const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+backWall.position.set(0, 1.5, -4);
+scene.add(backWall);
+
+const glassMaterial = new THREE.MeshLambertMaterial({
+color: 0x88ccff,
+transparent: true,
+opacity: 0.3
+});
+const glass = new THREE.Mesh(backWallGeometry, glassMaterial);
+glass.position.set(0, 1.5, 4);
+scene.add(glass);
+
+const pusherGeometry = new THREE.BoxGeometry(11, 0.3, 1);
+const pusherMaterial = new THREE.MeshLambertMaterial({ color: 0x4477ff });
+pusher = new THREE.Mesh(pusherGeometry, pusherMaterial);
+pusher.position.set(0, 0.15, 2);
+pusher.castShadow = true;
+scene.add(pusher);
+
+const miningAreaGeometry = new THREE.BoxGeometry(24, 0.1, 20);
+const miningAreaMaterial = new THREE.MeshLambertMaterial({ color: 0x4a4a2a });
+const miningArea = new THREE.Mesh(miningAreaGeometry, miningAreaMaterial);
+miningArea.position.set(0, 0, -14);
+miningArea.receiveShadow = true;
+scene.add(miningArea);
+
+createBuildingSlots();
+
+for (let i = 0; i < 15; i++) {
+createCoin(
+(Math.random() - 0.5) * 10,
+0.1 + Math.random() * 0.5,
+(Math.random() - 0.5) * 3
+);
+}
+
+document.getElementById('dropCoin').addEventListener('click', dropCoin);
+document.getElementById('dropCoin').addEventListener('touchstart', (event) => {
+event.preventDefault();
+dropCoin();
+});
+document.getElementById('pushButton').addEventListener('click', activatePusher);
+document.getElementById('pushButton').addEventListener('touchstart', (event) => {
+event.preventDefault();
+activatePusher();
+});
+document.getElementById('modeToggle').addEventListener('click', toggleMode);
+document.getElementById('modeToggle').addEventListener('touchstart', (event) => {
+event.preventDefault();
+toggleMode();
+});
+document.getElementById('saveGame').addEventListener('click', saveGame);
+document.getElementById('saveGame').addEventListener('touchstart', (event) => {
+event.preventDefault();
+saveGame();
+});
+document.getElementById('loadGame').addEventListener('click', loadGame);
+document.getElementById('loadGame').addEventListener('touchstart', (event) => {
+event.preventDefault();
+loadGame();
+});
+
+renderer.domElement.addEventListener('click', onMouseClick);
+renderer.domElement.addEventListener('mousemove', onMouseMove);
+renderer.domElement.addEventListener('touchstart', (event) => {
+event.preventDefault();
+event.clientX = event.touches[0].clientX;
+event.clientY = event.touches[0].clientY;
+onMouseClick(event);
+});
+renderer.domElement.addEventListener('touchmove', (event) => {
+event.preventDefault();
+event.clientX = event.touches[0].clientX;
+event.clientY = event.touches[0].clientY;
+onMouseMove(event);
+});
+
+window.addEventListener('resize', onWindowResize);
+} catch (error) {
+console.error("Init error:", error);
+}
+}
+
+function createBuildingSlots() {
+try {
+const slotGeometry = new THREE.BoxGeometry(2, 0.05, 2);
+const slotMaterial = new THREE.MeshLambertMaterial({
+color: 0x666666,
+transparent: true,
+opacity: 0.6
+});
+
+for (let x = -9; x <= 9; x += 4) {
+for (let z = -22; z <= -6; z += 4) {
+const slot = new THREE.Mesh(slotGeometry, slotMaterial);
+slot.position.set(x, 0.05, z);
+slot.userData = {
+isEmpty: true,
+building: null,
+buildingType: null,
+level: 0,
+id: `${x}_${z}`
+};
+scene.add(slot);
+buildingSlots.push(slot);
+}
+}
+} catch (error) {
+console.error("Create building slots error:", error);
+}
+}
+
+function createBuildingPanel() {
+try {
+const panel = document.getElementById('buildingOptions');
+panel.innerHTML = '';
+
+Object.entries(buildingTypes).forEach(([key, buildingDef]) => {
+const option = document.createElement('div');
+option.className = 'building-option';
+option.dataset.type = key;
+
+const cost = buildingDef.baseCost;
+const canAfford = coinCount >= cost;
+if (canAfford) {
+option.classList.add('affordable');
+} else {
+option.classList.add('expensive');
+}
+
+const ownedBuildings = buildingSlots.filter(slot => slot.userData.buildingType === key);
+const count = ownedBuildings.length;
+const totalIncome = ownedBuildings.reduce((sum, slot) =>
+sum + getUpgradeIncome(buildingDef.baseIncome, slot.userData.level), 0);
+
+option.innerHTML = `
+<div class="building-name">${buildingDef.emoji} ${buildingDef.name}</div>
+<div class="building-cost">Cost: ${cost} gold</div>
+<div class="building-income">Base: ${buildingDef.baseIncome} gold/sec</div>
+<div class="building-count">Owned: ${count}</div>
+<div class="building-income">Total Production: ${totalIncome}/sec</div>
+`;
+
+option.addEventListener('click', () => selectBuilding(key));
+option.addEventListener('touchstart', (event) => {
+event.preventDefault();
+selectBuilding(key);
+});
+panel.appendChild(option);
+});
+} catch (error) {
+console.error("Create building panel error:", error);
+}
+}
+
+function selectBuilding(type) {
+try {
+selectedBuildingType = type;
+document.querySelectorAll('.building-option').forEach(option => {
+option.classList.remove('selected');
+});
+document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+
+document.getElementById('buildingInfo').style.display = 'block';
+document.getElementById('buildingInfoContent').innerHTML = `
+Selected: ${buildingTypes[type].emoji} ${buildingTypes[type].name}<br>
+Tap a slot to build or upgrade
+`;
+} catch (error) {
+console.error("Select building error:", error);
+}
+}
+
+function createCoin(x, y, z) {
+try {
+if (coins.length > 10) return; // Reduced for mobile
+const coinGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 12);
+const coinMaterial = new THREE.MeshPhongMaterial({
+color: 0xffd700,
+shininess: 100,
+specular: 0xffffff
+});
+const coin = new THREE.Mesh(coinGeometry, coinMaterial);
+coin.position.set(x, y, z);
+coin.castShadow = true;
+coin.receiveShadow = true;
+
+coin.userData = {
+velocity: { x: 0, y: 0, z: 0 },
+mass: 1,
+friction: 0.95,
+restitution: 0.3
+};
+
+scene.add(coin);
+coins.push(coin);
+return coin;
+} catch (error) {
+console.error("Create coin error:", error);
+}
+}
+
+function dropCoin() {
+try {
+if (coinCount >= 10) {
+const coin = createCoin(
+(Math.random() - 0.5) * 2,
+5,
+-2 + Math.random() * 0.5
+);
+if (coin) {
+coin.userData.velocity.y = -0.1;
+coinCount -= 10;
+updateUI();
+}
+}
+} catch (error) {
+console.error("Drop coin error:", error);
+}
+}
+
+function activatePusher() {
+try {
+if (!isAnimating) {
+isAnimating = true;
+const startZ = pusher.position.z;
+const targetZ = startZ - 2;
+
+const animateForward = () => {
+pusher.position.z -= 0.1;
+if (pusher.position.z > targetZ) {
+requestAnimationFrame(animateForward);
+} else {
+const animateBack = () => {
+pusher.position.z += 0.1;
+if (pusher.position.z < startZ) {
+requestAnimationFrame(animateBack);
+} else {
+pusher.position.z = startZ;
+isAnimating = false;
+}
+};
+animateBack();
+}
+};
+animateForward();
+}
+} catch (error) {
+console.error("Activate pusher error:", error);
+}
+}
+
+function toggleMode() {
+try {
+buildMode = !buildMode;
+const button = document.getElementById('modeToggle');
+if (buildMode) {
+button.textContent = 'Mining Mode';
+button.style.background = 'linear-gradient(45deg, #ff6b6b, #ff8e8e)';
+} else {
+button.textContent = 'Build Mode';
+button.style.background = 'linear-gradient(45deg, #4477ff, #6699ff)';
+}
+} catch (error) {
+console.error("Toggle mode error:", error);
+}
+}
+
+function onMouseClick(event) {
+try {
+if (!buildMode || !selectedBuildingType) return;
+
+const mouse = new THREE.Vector2();
+mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+const raycaster = new THREE.Raycaster();
+raycaster.setFromCamera(mouse, camera);
+
+const intersects = raycaster.intersectObjects(buildingSlots);
+if (intersects.length > 0) {
+const slot = intersects[0].object;
+const buildingDef = buildingTypes[selectedBuildingType];
+
+if (slot.userData.isEmpty) {
+if (coinCount >= buildingDef.baseCost) {
+buildNewBuilding(slot, selectedBuildingType);
+}
+} else if (slot.userData.buildingType === selectedBuildingType) {
+const upgradeCost = getUpgradeCost(buildingDef.baseCost, slot.userData.level);
+if (coinCount >= upgradeCost) {
+upgradeBuilding(slot);
+}
+}
+}
+} catch (error) {
+console.error("Mouse click error:", error);
+}
+}
+
+function onMouseMove(event) {
+try {
+if (buildMode && selectedBuildingType) {
+const mouse = new THREE.Vector2();
+mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+const raycaster = new THREE.Raycaster();
+raycaster.setFromCamera(mouse, camera);
+
+const intersects = raycaster.intersectObjects(buildingSlots);
+
+buildingSlots.forEach(slot => {
+if (slot.userData.isEmpty) {
+slot.material.color.setHex(0x666666);
+} else {
+slot.material.color.setHex(0x444444);
+}
+});
+
+if (intersects.length > 0) {
+const slot = intersects[0].object;
+const buildingDef = buildingTypes[selectedBuildingType];
+
+if (slot.userData.isEmpty) {
+const canAfford = coinCount >= buildingDef.baseCost;
+slot.material.color.setHex(canAfford ? 0x00ff00 : 0xff0000);
+} else if (slot.userData.buildingType === selectedBuildingType) {
+const upgradeCost = getUpgradeCost(buildingDef.baseCost, slot.userData.level);
+const canAfford = coinCount >= upgradeCost;
+slot.material.color.setHex(canAfford ? 0x0088ff : 0xff4444);
+}
+}
+}
+} catch (error) {
+console.error("Mouse move error:", error);
+}
+}
+
+function buildNewBuilding(slot, buildingType) {
+try {
+const buildingDef = buildingTypes[buildingType];
+coinCount -= buildingDef.baseCost;
+
+const geometry = new THREE.BoxGeometry(
+buildingDef.geometry.width,
+buildingDef.geometry.height,
+buildingDef.geometry.depth
+);
+const material = new THREE.MeshLambertMaterial({ color: buildingDef.color });
+const building = new THREE.Mesh(geometry, material);
+
+building.position.copy(slot.position);
+building.position.y = buildingDef.geometry.height / 2;
+building.castShadow = true;
+building.receiveShadow = true;
+
+scene.add(building);
+
+slot.userData.isEmpty = false;
+slot.userData.building = building;
+slot.userData.buildingType = buildingType;
+slot.userData.level = 0;
+
+buildings[slot.userData.id] = slot.userData;
+
+totalBuildings++;
+updateAutoMiningRate();
+updateUI();
+createBuildingPanel();
+} catch (error) {
+console.error("Build new building error:", error);
+}
+}
+
+function upgradeBuilding(slot) {
+try {
+const buildingDef = buildingTypes[slot.userData.buildingType];
+const upgradeCost = getUpgradeCost(buildingDef.baseCost, slot.userData.level);
+
+coinCount -= upgradeCost;
+slot.userData.level++;
+
+const building = slot.userData.building;
+const newHeight = buildingDef.geometry.height * (1 + slot.userData.level * 0.3);
+
+scene.remove(building);
+
+const geometry = new THREE.BoxGeometry(
+buildingDef.geometry.width,
+newHeight,
+buildingDef.geometry.depth
+);
+
+const goldTint = Math.min(slot.userData.level * 0.2, 0.8);
+const baseColor = new THREE.Color(buildingDef.color);
+const goldColor = new THREE.Color(0xffd700);
+const finalColor = baseColor.lerp(goldColor, goldTint);
+
+const material = new THREE.MeshLambertMaterial({ color: finalColor });
+const newBuilding = new THREE.Mesh(geometry, material);
+
+newBuilding.position.copy(slot.position);
+newBuilding.position.y = newHeight / 2;
+newBuilding.castShadow = true;
+newBuilding.receiveShadow = true;
+
+scene.add(newBuilding);
+slot.userData.building = newBuilding;
+
+updateAutoMiningRate();
+updateUI();
+createBuildingPanel();
+} catch (error) {
+console.error("Upgrade building error:", error);
+}
+}
+
+function updateAutoMiningRate() {
+try {
+autoMiningRate = 0;
+buildingSlots.forEach(slot => {
+if (!slot.userData.isEmpty) {
+const buildingDef = buildingTypes[slot.userData.buildingType];
+autoMiningRate += getUpgradeIncome(buildingDef.baseIncome, slot.userData.level);
+}
+});
+} catch (error) {
+console.error("Update auto mining rate error:", error);
+}
+}
+
+function generateAutoMining() {
+try {
+if (autoMiningRate > 0) {
+coinCount += autoMiningRate;
+
+buildingSlots.forEach(slot => {
+if (!slot.userData.isEmpty) {
+const buildingDef = buildingTypes[slot.userData.buildingType];
+const income = getUpgradeIncome(buildingDef.baseIncome, slot.userData.level);
+
+if (Math.random() < 0.3) {
+showFloatingGold(slot.position, income);
+}
+}
+});
+
+updateUI();
+}
+} catch (error) {
+console.error("Generate auto mining error:", error);
+}
+}
+
+function showFloatingGold(position, amount) {
+try {
+const vector = new THREE.Vector3(position.x, position.y + 2, position.z);
+vector.project(camera);
+
+const x = (vector.x + 1) / 2 * window.innerWidth;
+const y = -(vector.y - 1) / 2 * window.innerHeight;
+
+const floatingElement = document.createElement('div');
+floatingElement.className = 'floating-gold';
+floatingElement.textContent = `+${amount}`;
+floatingElement.style.left = x + 'px';
+floatingElement.style.top = y + 'px';
+
+document.body.appendChild(floatingElement);
+
+setTimeout(() => {
+document.body.removeChild(floatingElement);
+}, 2000);
+} catch (error) {
+console.error("Show floating gold error:", error);
+}
+}
+
+function onWindowResize() {
+try {
+camera.aspect = window.innerWidth / window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth, window.innerHeight);
+} catch (error) {
+console.error("Window resize error:", error);
+}
+}
+
+function animate() {
+try {
+if (!gameStarted) return;
+
+requestAnimationFrame(animate);
+
+if (!isAnimating) {
+pusher.position.z += pusherDirection * pusherSpeed;
+if (pusher.position.z > 2.5 || pusher.position.z < 1.5) {
+pusherDirection *= -1;
+}
+}
+
+coins.forEach((coin, index) => {
+coin.userData.velocity.y -= 0.01;
+coin.position.y += coin.userData.velocity.y;
+
+if (coin.position.y < 0.1) {
+coin.position.y = 0.1;
+coin.userData.velocity.y *= -coin.userData.restitution;
+coin.userData.velocity.x *= coin.userData.friction;
+coin.userData.velocity.z *= coin.userData.friction;
+}
+
+if (pusher.position.z - 0.5 < coin.position.z && coin.position.z < pusher.position.z + 0.5 &&
+Math.abs(coin.position.x) < 5.5 && coin.position.y < 0.5) {
+coin.userData.velocity.z = -0.1;
+}
+
+if (coin.position.x < -5.5 || coin.position.x > 5.5) {
+coin.userData.velocity.x *= -coin.userData.restitution;
+coin.position.x = Math.max(-5.5, Math.min(5.5, coin.position.x));
+}
+
+if (coin.position.z > 4 || coin.position.z < -4) {
+coinCount += 5;
+score += 10;
+scene.remove(coin);
+coins.splice(index, 1);
+updateUI();
+} else {
+coin.position.x += coin.userData.velocity.x;
+coin.position.z += coin.userData.velocity.z;
+}
+});
+
+renderer.render(scene, camera);
+} catch (error) {
+console.error("Animate error:", error);
+}
+}
+
+// Auto-start game on load
+window.onload = () => {
+try {
+console.log("Game script loaded, starting game...");
+gameStarted = true;
+init();
+animate();
+createBuildingPanel();
+setInterval(generateAutoMining, 1000);
+} catch (error) {
+console.error("Auto-start error:", error);
+}
+};
+</script>
 </body>
 </html>

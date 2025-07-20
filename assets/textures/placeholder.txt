@@ -1,0 +1,1 @@
+Bu dosya klasörün görünmesi için eklendi. Texture dosyalarını buraya koy.

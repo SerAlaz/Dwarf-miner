@@ -1,3 +1,6 @@
+const textureLoader = new THREE.TextureLoader();
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -265,8 +268,8 @@ WebGL is not supported on this device. Please use a modern browser.
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>
 let scene, camera, renderer, pusher, coins = [], gameStarted = false;
-let coinCount = 100, score = 0, totalBuildings = 0, autoMiningRate = 0;
-let pusherDirection = 1, pusherSpeed = 0.02;
+let coinCount = 1000, score = 0, totalBuildings = 0, autoMiningRate = 0;
+let pusherDirection = 1.2 , pusherSpeed = 0.02;
 let isAnimating = false, buildMode = false;
 let buildingSlots = [], selectedBuildingType = null;
 let lastIncomeTime = Date.now();
@@ -279,8 +282,8 @@ baseCost: 50,
 baseIncome: 1,
 color: 0xff6b6b,
 geometry: { width: 1, height: 1, depth: 1 },
-emoji: "🥽"
-texturePath: "assets/textures/pan.png" 
+emoji: "🥽" 
+  texturePath: "assets/textures/pan.png" 
 },
 miningCart: {
 name: "Mining Cart",
